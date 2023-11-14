@@ -8,12 +8,21 @@ async function timeout(ms) {
 async function fetchStreamedChatContent(options, onResponse = null, onFinish = null, onError = null) {
 
     try {
+        let chunks = '';
         await fetchStreamedChat(
             options,
-            (responseChunk) => {
-                const content = JSON.parse(responseChunk).choices[0].delta.content;
-                if (content && onResponse) {
-                    onResponse(content);
+            (responseChunk, reader) => {
+                chunks += responseChunk;
+                try {
+                    const content = JSON.parse(chunks).choices[0].delta.content;
+                    if (content && onResponse) {
+                        onResponse(content, reader);
+                    }
+                }catch (e) {
+                    // if SyntaxError, it means the chunks is not a valid JSON yet, so skip. els rethrow 
+                    if (!(e instanceof SyntaxError)) {
+                        throw e;
+                    }
                 }
             }
         );
